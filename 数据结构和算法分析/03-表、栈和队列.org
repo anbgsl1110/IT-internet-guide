@@ -1,0 +1,84 @@
+#+title:03-表、栈和队列
+#+date:20180628
+#+email:anbgsl1110@gmail.com
+#+keywords: 数据结构 算法分析 表、栈和队列  jiayonghliang
+#+description:表、栈和队列
+#+options: toc:2 html-postamble:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 抽象数据类型
+程序设计的基本法则之一是例程不应超过一页。这可以通过把程序分割为一些模块（module）来实现。每个模块是一个逻辑单位并执行某个指定的任务，它通过调用其他模块而使本身很小。
+
+模块化有几个优点：
+1. 调试小程序比调试大程序要容易得多。
+2. 多个人同时对一个模块化程序编程要更容易。
+3. 一个写的好的模块化程序把某些依赖关系只局限在一个例程里，这样使得修改起来会更容易。
+
+抽象数据类型（abstract data type，ADT）是一些操作的集合。抽象数据类型是数学的抽象；在ADT的定义中不涉及如何实现操作的集合。这可以看作是模块化设计的扩充。我们基本的想法是，这些操作的实现只在程序中编写一次，而程序中任何其他部分需要在该ADT上运行其中的一种操作时可以通过调用适当的函数来进行。
+* 表ADT
+我们将处理一般的形如A_1 ,A_2 ,A_3 ...,A_N 的表。我们说，这个表的大小是N。我们称大小为0的表为空表（empty list）。
+
+对于除空表外的任何表，我们说A_(i+1) 后继A_i （或继A_i 之后）并称A_(i-1) (i < N)前驱A_i (i > 1)。
+** 表的简单数组实现
+对表的所有操作都可以通过使用数组来实现。因为插入和删除的运行时间是如此的慢以及表的大小还必须事先已知，所以简单数组一般不用来实现表这种结构。
+** 链表
+为了避免插入和删除的线性开销，我们需要允许表可以不连续存储，否则表的部分或全部需要整体移动。
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement01.png 
+
+链表由一系列不必在内存中相连的结构组成。每一个结构均含有表元素和指向包含该元素后继元的结构的指针。我们称之为Next指针。最后一个单元的Next指针指向NULL。
+** 程序设计细节
+可能出问题的地方
+- 并不存在从所给定义出发在表的前面插入元素的真正显性的方法。
+- 从表的前面实行删除是一个特殊情况，因为它改变了表的起始端；编程中的疏忽将会造成表的丢失。
+- 对于一般的删除，虽然指针的移动很简单，但是删除算法要求我们记住被删除元素前面的表元。
+解决上面的问题：留出一个标志结点，有时候称之为表头（header）或哑结点（dummy node）。我们约定，表头的位置0处。
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement02.png
+
+链表的编程实现
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement03.png
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement04.png
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement05.png
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement06.png
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement07.png
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement08.png
+** 双链表
+有时候以倒序扫描链表很方便。标准实现的方法此时无能无力，然而解决方法却很简单。只要在数据结构附加一个域，使它包含向前一个单元的指针即可。其开销是附加的链，它增加了空间的需求，同时也使得插入和删除的开销增加一倍，因为有更多的指针需要定位。另一方面，它简化了删除操作，因为你不再被迫使用一个指向前驱元的指针来访问一个关键字；这个信息是现成的。
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement09.png
+** 循环链表
+让最后的单元反过来直指第一个单元是一种流行的做法。它可以有表头，也可以没有表头（若有表头，则最后的单元就指向它），并且还可以是双向链表（第一个单元的前驱元指针指向最后的单元）。这无疑会影响某些测试，不过这种结构在某些应用程序中却很流行。
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement10.png
+** 例子
+*** 多项式
+*** 基数排序（radix sort），有时也称为卡式排序（card sort）
+如果我们有N个整数，范围从1到M（或从0到M-1），我们可以利用这性格信息得到一种快速的排序，叫做桶氏排序（bucket sort）。我们留置一个数据，称之为Count，大小为M，并初始化为零。于是。Count有M个单位（或桶），开始时他们都是空的。当A_i 被读入时Count[A_i]增1.在所有的输入被读入后，扫描数组Count，打印输出排好序的表。该算法花费O(M+N)。
+
+基数排序时这种方法的推广。设我们有10个数，范围在0到999之间，我们将其排序。一般来说，这是0到N^p - 1间的N个数，p是某个常数。显然我们不能使用桶排序，那样桶就太多了。我们的策略是使用多躺桶氏排序。自然的算法就是通过最高位（有效）“位”（对基数N所取的位）进行桶氏排序
+，然后对次最高（有效）位进行，等等。这种算法不能得出正确结果，但是如果我们用最低（有效）"位"优先的方式进行桶氏排序，那么算法将得到正确结果。
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement12.png
+
+为使算法能够得出正确的结果，要注意唯一出错的可能是如果两个数出自同一个桶但顺序却是错误的。不过，前面各趟排序顺序保证了当几个数进入一个桶的时候，它们是以排序的顺序进入的。该排序的运行时间是O(P(N+B))，其中P是排序的躺数，N是要被排序的元素的个数，而B是桶数。本例，B = N。
+
+*** 多重表
+
+http://www.jiayongliang.cn/diary/img/201806/arrayList-implement11.png
+
+** 链表的游标实现
+有些语言不支持指针，如果需要链表又不能使用指针，可以使用游标（cursor）实现法。
+
+在链表的指针实现中有两个重要的特点：
+1. 数据存储在一组结构体中。每个结构体包含有数据以及指向下一个结构体的指针。
+2. 一个新的机构体可以通过调用malloc而从系统内存（global memory）得到，并可以通过调用free而被释放。
+
+游标法必须能够模拟实现这两条特性。满足条件1的逻辑方法是要有一个全局的结构体数组。对于该数组中的任何单元，其数组下标可以用来代表一个地址。
+
+模拟条件2，通过保留一个表（即freelist），这个表由不在任何表中的单元构成。
