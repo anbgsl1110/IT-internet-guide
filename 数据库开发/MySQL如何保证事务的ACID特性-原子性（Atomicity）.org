@@ -1,0 +1,73 @@
+# #+title:MySQL如何保证事务的ACID特性01-AD
+#+title:MySQL如何保证事务的ACID特性-原子性（Atomicity）
+#+date:20210911
+#+email:anbgsl1110@gmail.com
+#+keywords: 数据库开发 mysql 事务特性ACID  jiayonghliang
+#+description:mysql如何保证事务的ACID特性
+#+options: toc:3 html-postamble:nil ^:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 说明
+MySQL支持事务的存储引擎有innoDB、NDB Cluster等，其中innoDB的使用最为广泛；其他存储引擎不支持事务，如mylsam、memory等，后面的内容都是基于innoDB的。
+
+ACID是事务的四个特性：
+- 原子性（Atomicity，或称不可分割性）
+- 一致性（Consistency）
+- 隔离性（Isolation）
+- 持久性（Durability）
+
+* 原子性定义
+在学习事务时，经常有人会告诉你，事务就是一系列的操作，要么全部都执行，要都不执行，这其实就是对事务原子性的刻画。
+
+* MySQL日志
+MySQL的日志有很多种，如二进制日志、错误日志、查询日志、慢查询日志等，此外InnoDB存储引擎还提供了两种事务日志：redo log(重做日志)和undo log(回滚日志)。其中redo log用于保证事务持久性；undo log则是事务原子性和隔离性实现的基础。
+* 回滚日志保证事务的原子性
+实现原子性的关键，是当事务回滚时能够撤销所有已经成功执行的sql语句。InnoDB实现回滚，靠的是回滚日志undo log：当事务对数据库进行修改时，InnoDB会生成对应的undo log；如果事务执行失败或调用了rollback，导致事务需要回滚，便可以利用undo log中的信息将数据回滚到修改之前的样子。
+
+回滚日志除了能够在发生错误或者用户执行 rollback 时提供回滚相关的信息，它还能够在整个系统发生崩溃、数据库进程直接被杀死后，当用户再次启动数据库进程时，还能够立刻通过查询回滚日志将之前未完成的事务进行回滚，这也就需要回滚日志必须先于数据持久化到磁盘上，是我们需要先写日志后写数据库的主要原因。
+
+回滚日志并不能将数据库物理地恢复到执行语句或者事务之前的样子；它是逻辑日志，当回滚日志被使用时，它只会按照日志逻辑地将数据库中的修改撤销掉看，可以理解为，我们在事务中使用的每一条 INSERT 都对应了一条 DELETE，每一条 UPDATE 也都对应一条相反的 UPDATE 语句。
+
+以update操作为例：当事务执行update时，其生成的undo log中会包含被修改行的主键(以便知道修改了哪些行)、修改了哪些列、这些列在修改前后的值等信息，回滚时便可以使用这些信息将数据还原到update之前的状态。
+
+* 回滚日志产生和释放
+
+事务开始之前，将当前是的版本生成undo log，undo 也会产生 redo 来保证undo log的可靠性。
+
+当事务提交之后，undo log并不能立马被删除，
+
+而是放入待清理的链表，由purge线程判断是否由其他事务在使用undo段中表的上一个事务之前的版本信息，决定是否可以清理undo log的日志空间。
+
+* 回滚日志位置
+MySQL5.6之前，undo表空间位于共享表空间的回滚段中，共享表空间的默认的名称是ibdata，位于数据文件目录中。
+
+MySQL5.6之后，undo表空间可以配置成独立的文件，但是提前需要在配置文件中配置，完成数据库初始化后生效且不可改变undo log文件的个数
+
+如果初始化数据库之前没有进行相关配置，那么就无法配置成独立的表空间了。
+
+关于MySQL5.7之后的独立undo 表空间配置参数如下
+
+innodb_undo_directory = /data/undospace/ –undo独立表空间的存放目录
+
+innodb_undo_logs = 128 –回滚段为128KB
+
+innodb_undo_tablespaces = 4 –指定有4个undo log文件
+
+如果undo使用的共享表空间，这个共享表空间中又不仅仅是存储了undo的信息，共享表空间的默认为与MySQL的数据目录下面，其属性由参数innodb_data_file_path配置。
+
+* 回滚日志多版本并发控制(MVCC)
+到目前为止，所有的事务都只是串行执行的，一直都没有考虑过并行执行的问题；然而在实际工作中，并行执行的事务才是常态，然而并行任务下，却可能出现非常复杂的问题，为了保证事务的原子性，就会将并行事务中的工作全部回滚，这种情况也叫做级联回滚。级联回滚的发生会导致大量的工作需要撤回，是我们难以接受的，不过如果想要达到绝对的原子性，这件事情又是不得不去处理的。
+
+在MySQL数据库 InnoDB 存储引擎中，还用回滚日志来实现多版本并发控制(简称：MVCC)。
+
+MVCC的特点：在同一时刻，不同的事务读取到的数据可能是不同的(即多版本)——例如，在某一时刻，事务A和事务C可以读取到不同版本的数据。
+
+MVCC最大的优点是读不加锁，因此读写不冲突，并发性能好。InnoDB实现MVCC，多个版本的数据可以共存，主要基于以下技术及数据结构：
+
+1）隐藏列：InnoDB中每行数据都有隐藏列，隐藏列中包含了本行数据的事务id、指向undo log的指针等。
+
+2）基于undo log的版本链：前面说到每行数据的隐藏列中包含了指向undo log的指针，而每条undo log也会指向更早版本的undo log，从而形成一条版本链。
+
+3）ReadView：通过隐藏列和版本链，MySQL可以将数据恢复到指定版本；但是具体要恢复到哪个版本，则需要根据ReadView来确定。所谓ReadView，是指事务（记做事务A）在某一时刻给整个事务系统（trx_sys）打快照，之后再进行读操作时，会将读取到的数据中的事务id与trx_sys快照比较，从而判断数据对该ReadView是否可见，即对事务A是否可见。
+
+通过维护多个版本的数据，数据库可以允许事务在数据被其他事务更新时对旧版本的数据进行读取，因为所有的读操作不再需要等待写锁的释放，所以能够显著地提升读的性能。
+
