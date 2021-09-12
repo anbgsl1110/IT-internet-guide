@@ -1,11 +1,10 @@
-# #+title:MySQL如何保证事务的ACID特性01-AD
 #+title:MySQL如何保证事务的ACID特性-原子性（Atomicity）
 #+date:20210911
 #+email:anbgsl1110@gmail.com
 #+keywords: 数据库开发 mysql 事务特性ACID  jiayonghliang
 #+description:mysql如何保证事务的ACID特性
 #+options: toc:3 html-postamble:nil ^:nil
-#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
 * 说明
 MySQL支持事务的存储引擎有innoDB、NDB Cluster等，其中innoDB的使用最为广泛；其他存储引擎不支持事务，如mylsam、memory等，后面的内容都是基于innoDB的。
 
