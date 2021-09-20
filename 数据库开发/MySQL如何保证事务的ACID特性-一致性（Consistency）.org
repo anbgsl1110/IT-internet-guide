@@ -4,7 +4,7 @@
 #+keywords: 数据库开发 mysql 事务特性ACID  jiayonghliang
 #+description:MySQL如何保证事务的ACID特性-一致性（Consistency）
 #+options: toc:3 html-postamble:nil ^:nil
-#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
 * 说明 
 一致性是一个非常让人迷惑的概念，原因是数据库领域其实包含两个一致性，一个是 ACID 中的一致性、另一个是 CAP 定义中的一致性。
 * ACID

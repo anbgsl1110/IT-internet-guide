@@ -4,7 +4,6 @@
 #+keywords: 数据结构 算法分析 基础知识  jiayonghliang
 #+description:基础知识
 #+options: toc:2 html-postamble:nil
-
 * 基础知识
 设一组N个数而要确定其中第k个最大者的问题。我们称之为选择问题（selection problem）。
 
