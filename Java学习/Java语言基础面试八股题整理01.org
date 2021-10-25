@@ -1,0 +1,99 @@
+#+title:Java语言基础面试八股题整理01
+#+date:2019-03-24
+#+email:anbgsl1110@gmail.com
+#+keywords: 复习系列 Java 语言基础  jiayonghliang
+#+description:算法设计技巧
+#+options: toc:2 html-postamble:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 如何学习Java
+第一阶段：基础阶段
+- SQL语句：查询、更新、建表、约束、存储过程
+- Java基础：基础语法（数据类型、if...else、while、for）、面向对象、常用类库、Java类集、java Io、JDBC、DAO设计模式
+- JSP开发：JSP+DAO、MVC开发
+
+第二阶段：中级开发阶段
+- 性能调优
+- Json、XML和Dom解析
+- 掌握一个前端框架
+- 开发框架、构建工具
+
+第三阶段：框架开发
+- Struts、Hibernate
+- Spring、Spring Mvc、Mybatis
+- JDK源码和框架源码
+* 内存流和管道流
+在java里面，IO的设计是非常全面的。
+
+内存是直接基于程序内存做的一种简单的IO处理。，可以把内存想象成文件，但这个文件不会出现在磁盘上，所以内存流是在需要产生IO的情况下，但是又不希望产生实际的存储文件的时候采用的一种IO方案。
+
+管道最早是来自与Unix系统中的一个概念，指的是两个进程之间的通讯关系，同一个程序由于运行的进程不同，所以其拥有各自的数据存储空间。Java并没有进程的开发，所以为了保证两个进程之间可以互相的沟通，提供有了管道流的概念，而java是多线程的编程语言，所以就只有在多线程的结构上使用了管道的概念。
+* 什么时候使用Object对象接收
+Object之所以会被大量的进行参数的接收处理，很大的一部分原因在于：程序里面需要接收的类型很多，并不固定。可是现在的开发理念之中强调的问题不再是这一点了，而是如何可以避免向下转型（如果避无可避，那么就用），因为JDK1.5之后引入了范型机制，现在Api文档里接收Object对象的方法也是越来越少了，所以要尽量避免。
+* 线程池
+典型的例子就是数据库的连接池上，可以使用一个专门的类完成：java.util.concurrent包中。
+#+BEGIN_SRC java
+
+//接口
+public interface ExecutorService extends Executor{}
+
+//线程执行操作：
+public void execute(Runnable command){}
+
+//创建一个无限大小的线程池:
+ExecutorService service1 = Executors.newCachedThreadPool();
+
+//创建三个大小的线程池:
+ExecutorService service2 = Executors.newFixedThreadPool(3);
+
+service1.execute(new Runnable{});
+
+//可用线程数
+int x = Runtime.getRuntime().availableProcessors();
+
+#+END_SRC
+* 线程同步工具类
+CycleBarrier和CountDownLatch：
+- 这两个类都是在java.util.concurrent包中
+- CountDownlatch线程执行完之后再执行，本质就是执行了一个阻塞的操作处理，做减法
+- CycleBarrier是一个互相的等待状态，做加法
+- CountDownLatch是一计到底，一直减不能重置，CycleBarrier可以重置
+* 向下转型
+向上转型：可以达到参数的统一，例如子类转父类，顶端是Object。
+
+向下转型：需要使用子类特定的操作形式完成，但是从实际的开发来讲，向下转型是不推荐使用的，推荐使用的只有向上转型。不推荐的原因是因为其存在安全隐患。需要强制性处理，存在类型不匹配，抛出异常ClassCastException。
+* 虚拟内存
+从java8开始取消了永久代，而使用元空间来进行操作，那么也就是说java可以直接使用操作系统的内存进行处理，这样就有可能导致每一个线程分配的真实的主机内存空间越大，所以这个时候如果内存不足，操作系统会进行虚拟内存的控制。对于虚拟内存不需要做特别多的处理。
+
+当线程访问量追加，那么JVM就有可能进行不断的内存申请以及不断的内存回收，对JVM的-Xmx、Xms的两个参数的控制就非常重要。
+* 一道java面试题分析(代码块)
+
+程序的执行是由父到子完成的。
+- 代码块：代码块它一共分为4种代码块（普通代码块、构造块、static代码块、同步块）
+  - static代码块优先于构造方法执行，而且优先于主方法执行
+  - 构造块优先于构造方法执行，所以static代码块一定也优先于构造方法执行
+- 在子类对象实例化的时候一定会默认先去执行父类中的构造方法，而后再执行子类自己的构造方法
+
+实际开发中代码块比较少，在junit单元测试的时候往往会用到。
+* 引用传递是什么？
+java中包含数值传递和引用传递。
+
+同一块堆内存空间可以被不同的栈内存指向，引用数据类型的真正内容在堆内存里面。传递的是一个地址。
+
+基本数据类型的传递进行数值传递，是一个内容的拷贝，新的数值改变原来的数值没有影响。
+* 转义字符处理
+#+BEGIN_SRC 
+转义字符：\\(\)、\n、\t，
+这些符号是字符串定义的时候认可的。
+
+正则的操作如果写在了字符串符号
+里面必须转义。例如：\\d 。
+#+END_SRC
+
+* 资源注入
+@Resource、@Autowired，这两个注解都是直接利用反射进行对象的引用配置。没有相同的Bean对象的时候@Resource和@Autowired是没有区别的，而最重要的是相同的情况下，@Autowired无法使用，而@Resource则可以设置名字使用它。
+
+使用@Resource避免了引用关系的配置，而简化了程序的开发代码。
+* 字节流和字符流
+区别不是很大，所有磁盘保存的数据文件以及网络传输的文件实际上都是字节数据，但是为了让处理中文的时候更方便一些（仅仅是为了更方便一些），所以使用字符流来操作，例如，在进行WEB开发的时候往往会利用Writer类来实现内容的响应，就是因为里面有中文的支持。
+
+byte、char（String），在java里面有两套类：解决输出问题的打印流（不管字节还是字符操作的形式相同）、输入数据的Scanner。

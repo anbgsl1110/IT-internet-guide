@@ -1,0 +1,76 @@
+#+title:数据库事务控制
+#+date:2019-04-13
+#+email:anbgsl1110@gmail.com
+#+keywords: 复习系列 Java 数据库开发  jiayonghliang
+#+description:数据库开发
+#+options: toc:2 html-postamble:nil ^:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+** 数据库事务控制
+事务逻辑上的一组对数据对操作，组成这些操作的各个逻辑单元，要么一起成功，要么一起失败。
+
+本文以Spring事务为例。
+** 事务特性（ACID4种）
+- 原子性（atomicity）：强调事务的不可分割；
+- 一致性（consistency）：事务的执行前后数据的完整性保持一致；
+- 隔离性（isolation）：一个事务的执行的过程中，不应该受到其他事务的干扰；
+- 持久性（durability）：事务一旦结束，数据就持久到数据库。
+
+** 事务隔离级别（4种）
+*如果不考虑隔离性引发的安全性问题：*
+- 脏读：一个事务读到了另一个事务未提交的数据
+- 不可重复读：一个事务督导另一个事务已经提交的update的数据导致多次查询结果不一致
+- 虚幻读：一个事务读到了另一个事务已经提交的insert的数据导致多次查询结果不一致
+
+*解决读问题：设置事务隔离级别（4种）*
+
+DEFAULT这是一个PlatfromTransactionManager默认的隔离级别，使用数据库默认的事务隔离级别；
+- 未提交读（read uncommited）：脏读，不可重复读，虚读都有可能发生；
+- 已提交读（read commited）：避免脏读。但是不可重复读和虚读都有可能发生；
+- 可重复读（repeatable read）：避免脏读和不可重复读，但是虚读有可能发生；
+- 串行化的（serializable）：避免以上所有读问题。
+MySQL默认：可重复读，Sql server和Oracle默认：已提交读
+
+read uncommitted：是最低读事务隔离级别，它允许另外一个事务可以看到这个事务未提交读数据。
+
+read commited： 保证一个事务提交后才能被另外一个事务读取。另外一个事务不能读取该事务未提交的数据。
+
+repeatable read：这种事务隔离级别可以防止脏读，不可重复读。但是可能会出现幻想读。它除了保证一个事务不能被另外一个事务读取未提交读数据之外还避免了一下情况产生（不可重复读）。
+
+serializable：这是花费最高代价但最可靠但事务隔离级别。事务被处理为顺序执行。除了防止脏读，不可重复读之外，还避免了幻象读（避免三种）。
+
+** spring事务的传播行为（propagation behavior 7种）
+
+指的就是当一个事务方法被另一个事务方法调用时，这个事务方法应该如何进行。
+
+例如：在一个类中methodA事务方法调用methodB事务方法时，methodB是继续在调用者methodA中继续执行呢，还是为自己开启一个新事务执行，这就是由methodB的事务传播行为决定的。注：methodA和methodB在同一个类中时，需要从上下文容器中重新获取一次bean,再调methodB即可。
+
+在Transaction Definition接口中定义了7种事务得传播行为：h
+
+保证同一个事务中
+- PROPAGATION_REQUIRED支持当前事务，如果不存在，就新建一个（默认）
+- PROPAGATION_SUPPORTS支持当前事务，如果不存在，就不适用事务
+- PROPAGATION_MANDATORY 支持当前事务，如果不存在，抛出异常
+
+保证没有在同一个事务中
+- PROPAGATION_REQUIRES_NEW如果有事务存在，挂起当前事务，创建一个新的事务
+- PROPAGATION_NOT_SUPPORTED 以非事务方式运行，如果有事务存在，挂起当前事务
+- PROPAGATION_NEVER 以非事务方式运行，如果有事务存在，抛出异常
+- PROPAGATION_NESTED 如果当前事务存在，则嵌套事务执行
+
+** 业务层捕获异常（特殊需要）
+最近遇到这样的问题，使用spring时，在业务层需要捕获异常（特殊需要），当前一般情况下不需要这样做的。
+
+在ServiceA类中有method1，在该方法中调用另一个ServiceB类的method2方法时（假定该方法抛出异常），method1方法捕获该异常但是没有向上抛出。spring提示：org.springframework.transaction.UnexpectedRollbackException: Transaction rolled back because it has been marked as rollback-only 
+
+出现以上原因是spring执行method1方法时，开启一个新的事物，当调用method2方法时，当method2方法加入到method1方法的当前事务，当method2抛出异常，spring标记事务为回滚状态，method1方法捕获该异常，但没有抛出，spring会提交method1的事务，但spring发现该事务已经标记为回滚状态，而代码中却要提交事务，所以才会抛出以上的异常。 
+
+解决的方法：在ServiceB的method2方法上注解,告诉spring当该方法抛出自定义异常CustomException时，不要回滚事务，这样当该方法抛出异常时，spring不会标记事务为回滚状态。 
+#+BEGIN_SRC java
+@Transactional(noRollbackFor=CustomException.class) 
+public void method2() throws CustomException{ 
+}
+#+END_SRC
+** 开发中常见的三种事务处理模式
+1. JDBC的原始处理，她提供有：commit()、rollback()等
+2. 容器事务控制，使用jta组件，一般不用
+3. Spring的事务控制

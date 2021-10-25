@@ -1,0 +1,92 @@
+#+title:Java语言基础面试八股题整理02
+#+date:2019-03-24
+#+email:anbgsl1110@gmail.com
+#+keywords: 复习系列 Java 语言基础  jiayonghliang
+#+description:算法设计技巧
+#+options: toc:2 html-postamble:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* java内存模型
+如果说到内存，可能最直观的理解就在于Runtime类中，这个类采用了单例设计模式。
+
+#+BEGIN_SRC java
+Runtime run = Runtime.getRuntime(); // 取得Runtime类的对象
+
+MAX_MEMORY : run.maxMemory(); // 返回的是类型是long，单位是字节
+TOTAL_MEMORY : run.totalMemory();
+FREE_MEMORY : run.freeMemory();
+#+END_SRC
+
+在java里面对于内存的空间可以划分为如下几点：
+- 伊甸园区：新生的对象都保存在此处，但是不一定这些新生的对象会一直存活；
+   - 此处也属于内存空间，那么既然是内存空间就一定会被占满，如果占满了，那么就会执行GC处理；
+- 旧生代区：如果对象发现其要一直使用，那么就将进入到旧生代区，这属于二级回收保险；
+   - 如果要是先执行GC，那么肯定先清理伊甸园区，随后如果发现空间不足，继续清理旧生代区；例虚引用、软引用、幽灵引用；
+- 永久区：JDK1.8后称为元空间，永久区中的数据不会清除，即使程序出现了“OutOfMemoryException”也不会清除；
+
+调整内存：-Xms2048M -Xmx2048M -Xmn1024M
+- “-Xms”：初始分配的内存大小，默认为物理内存的64分之1，但是小于1G；
+- “-Xmx”：最大分配内存，默认大小为物理内存的4分之1，但是小于1G；
+- “-Xmn”: 设置年轻代（伊甸园区）的堆内存大小；
+只有调整之后才可以保证系统内存会得到提升，这样很明显，你就可以发挥出你电脑的性能。例如，构建工具Maven，通过进行这些设置调整内存可以提高打包效率。
+* BinaryTree
+对于树的操作需要考虑的问题：
+- 存储：左（Node）、右（Node）
+- 遍历：前序、中序（排序）和后序
+* ClassLoader加载
+ClassLoader是一个类加载器，java应用中不止一个类classloader，所以自己定义的在最后执行。
+1. BootStrap
+2. ExtClassLoader
+3. AppClassLoader
+所有的java程序一共有两套类加载器：双亲加载。
+- 系统中的类都会由一个系统内部的最高的类加载器负责加载，如果启动的时候要加载的类多就会造成启动变慢，所以JDK1.9才提出了一个模块化的设计；
+- 如果是用户定义的类，会使用其它的类加载器（ExtClassLoader、AppClassLoader、自己定义的类加载器），这样可以避免系统安全问题。
+在java里面有一个java.lang.String，如果你现在定义了一个完全一样的java.lang.String类，那么最终所带来的就是有可能造成安全隐患，所以JDK在设计的时候为了防止这种问题的出现，采用了双亲加载机制。
+
+同时使用了用户自己定义的类加载器还有一个好处：可以有用户自己定义类文件的来源，默认情况下的类加载器（99%是够用的）都是通过ClassPath加载的，但是如果使用了自定义的类加载器你可以通过远程或文件进行加载。
+* HashMap源代码
+-  Map.Entry(内部接口)类与HashMap.Node(子类定义的默认内部)类，这两个都是内部类
+#+BEGIN_SRC java
+static class Node<K,V> implements Map.Entry<K,v>{}
+#+END_SRC
+- HashMap存储数据增加到一定数量（默认8）的时候（阀值），那么就会由链表变成红黑树，性能会更好
+- HashMap里面对于数据保存个数的扩充是按倍数进行的，超过增长容量（默认0.75）
+- HashMap里面的方法都是异步处理的，属于非线程安全，“java.util.concurrentModificationException”表示存储的个数和操作的个数不同
+* Hash冲突
+在整个Hash存储过程中，必须明确两个实际的问题：hashCode()和equals()两个方法。如果hashCode相同，这个时候会查询equals()，不过一般在使用Map的时候都会考虑使用String来实现，所以String实现的Key里面是不存在这种复杂的概念，也就是说这样的概念只存在于自定义类中，所以当hash冲突严重的时候，首先去考虑equals()方法是否正常。那么在进行数据定位的时候就会更加的快速。
+
+从实际的数据结构的算法来讲，哈希冲突的处理方法：
+- 开放定址法，为一个哈希冲突求得一个地址序列
+- 链地址法，将所有哈希冲突的内容保存在一个链表里面(hashMap的实现原理)
+- 再哈希法，重新做一个Hash计算
+* ArrayList原理分析
+集合类中使用最多的就是ArrayList，它的线性复杂度是1，可以通过索引直接访问。实际上这个过程和数组是非常相似的。
+
+ArrayList在整个使用过程中如果要高效操作，那么最好设置一个初始的大小。在个数固定的时候，一般使用ArrayList，不确定的情况下使用LinkedList。ArrayList底层就是通过数组实现的。
+* Set集合
+基础认识：
+- 本身只定义不允许重复的存储
+- 接口完整的继承了Collection接口
+从实际的开发来看，Hibernate使用了Set集合，还有一些批量删除的操作使用了Set集合。
+
+常见的子类：
+- HashSet：无序存储（如果发现有重复，检查子类中的hashCode()和equals()方法）
+  - HashSet源代码中存在一个HashMap的对象，不过只利用了key（HashMap特点：key不能重复），没有利用value。
+  - 在HashSet类执行add()方法时利用了Map接口的put()方法。
+  - 在存储过程中存在hashCode()的使用。
+  - 在内部的Node类处理时依然使用了equals()判断key和value的内容。
+- TreeSet：使用的是Map集合（SortedMap接口子类）
+  - 源代码里面存放了一个TreeMap，TreeMap的特点是可排序的，排序是利用Comparable实现的。（comparator往往被忽略）。
+  - 利用Comparable接口中的compareTo()方法进行数据大小的判断。
+- LinkedHashSet：如果需要要进行连续的保存（FIFO），可以使用这个子类。之所以可以进行顺序的保存，是因为底层使用链表实现的。
+* Java调试
+断点调试：程序在设置断点的位置停止。
+* this关键字
+this表示当前对象，使用this的情形：
+- 调用本类的属性
+- 调用本类的方法
+- 调用本类的构造方法
+- 扩展方法中（表示当前对象）
+* default关键字
+起初的时候，default和switch配合使用。没有break的时候会执行后面的所有语句。
+
+在JDK1.8之后，lambda表达式的出现，java重新定义了接口的定义，可以定义一个default关键字的普通方法，以前接口中不能定义普通方法。这样如果某些方法对所有的子类有同样的定义，可以利用这个实现，减少方法的定义。
