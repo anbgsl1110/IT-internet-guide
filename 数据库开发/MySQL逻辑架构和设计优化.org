@@ -4,10 +4,10 @@
 #+keywords: 读书笔记 高性能Mysql
 #+description:《高性能Mysql》读书笔记
 #+options: toc:2 ^:nil html-postamble:nil  ^:nil
-#+html_head: <link rel="stylesheet" href="http://www.anbgsl1110-dms-aliang.space/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.anbgsl1110-dms-aliang.space/js/add-main-menu.js" type="text/javascript"></script>
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
 * Mysql逻辑架构
 ** 架构逻辑视图
-http://www.anbgsl1110-dms-aliang.space/diary/img/201709/mysql-0001.png
+[[http://www.jiayongliang.cn/diary/img/201709/mysql-0001.png]]
 
 每个虚线框为一层，总共三层。
 - 第一层，服务层(为客户端服务):为请求做连接处理，授权认证，安全等。
@@ -15,14 +15,14 @@ http://www.anbgsl1110-dms-aliang.space/diary/img/201709/mysql-0001.png
 - 第三层，存储引擎层，不光做存储和提取数据，而且针对特殊数据引擎还要做事务处理。
 ** 连接管理与安全性(第一层 服务层)
 *** 处理流程
-http://www.anbgsl1110-dms-aliang.space/diary/img/201709/mysql-0002.png
+[[http://www.jiayongliang.cn/diary/img/201709/mysql-0002.png]]
 
 - 每个连接的查询都在一个进程中的线程完成。
 - 服务器负责缓存线程，所以服务层不需要为每个连接新建线程。
 *** 认证流程
-http://www.anbgsl1110-dms-aliang.space/diary/img/201709/mysql-0003.png
+[[http://www.jiayongliang.cn/diary/img/201709/mysql-0003.png]]
 ** 优化与执行
-http://www.anbgsl1110-dms-aliang.space/diary/img/201709/mysql-0004.png
+[[http://www.jiayongliang.cn/diary/img/201709/mysql-0004.png]]
 
 - 在解析查询之前，服务器会“询问”是否进行了查询缓存(只能缓存SELECT语句和相应结果)。缓存过的直接返回结果，未缓存的就需要进行解析查询，优化，重新执行返回结果。
 - 解析查询时会创建一个内部数据结构(树)，然后对其进行各种优化。

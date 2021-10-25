@@ -4,7 +4,7 @@
 #+keywords: 读书笔记 基准测试 性能测试
 #+description:开发应该了解的基准测试知识
 #+options: toc:2 ^:nil html-postamble:nil  ^:nil
-#+html_head: <link rel="stylesheet" href="http://www.anbgsl1110-dms-aliang.space/css/org3.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.anbgsl1110-dms-aliang.space/js/add-main-menu.js" type="text/javascript"></script>
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org3.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
 ** 简单说明
 
 每个开发都应该了解一些基准测试的知识，基准测试并不是仅仅用来解决业务问题，测试性能，也是一种很好的学习方法。学习如何将问题分解成可以通过基准测试来获得答案的方法。

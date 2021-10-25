@@ -17,9 +17,9 @@ AVL(Adelson Velskii和Landis)树是带有平衡条件的二叉查找树。这个
 
 一棵AVL树是其每个节点的左子树和右子树的高度最多差1的二叉查找树。空树的高度定为-1。可以证明，大致上讲，一个AVL树的高度最多为1.44log(N+2) - 1.328，但是实际上高度只比logN稍微多一些。
 
-http://www.jiayongliang.cn/diary/img/201807/tree20.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree20.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree21.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree21.png]]
 
 因此，除去可能的插入外（我们将假设懒惰删除），所有的树操作都可以以时间O(logN)执行。当进行插入操作时，我们需要更新通向根节点路径上哪些节点的所有平衡信息，而插入操作隐含着困难的原因在于，插入一个节点可能破坏AVL树的特性。发生这种情况，那么就要把性质恢复以后才认为这一步插入完成。事实上，这个总可以通过对树进行简单的修正来做到，我们称为旋转（rotation）。
 
@@ -34,21 +34,21 @@ http://www.jiayongliang.cn/diary/img/201807/tree21.png
 
 第一种情况是插入发生在“外边”的情况（即左-左或者右-右的情况），该情况通过对树的一次单旋转（single rotation）而完成调整。第二种情况是插入发生在“内部”的情形（即左-右或者右-左的情况），该情况通过稍微复杂些的双旋转（double rotation）来处理。我们将会看到，这些都是对树的基本操作，它们多次用于平衡树的一些算法中。
 *** 单旋转
-http://www.jiayongliang.cn/diary/img/201807/tree22.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree22.png]]
 
 图4-31显示单旋转如何调整情形1。
 
 抽象的形容就是：把树形象的看成是柔软灵活的，抓住节点k_1 ，闭上你的双眼，使劲的摇动它，在重力的作用下，k_1 就变成了新的根。二叉查找树的性质告诉我们，在原树中k_2 > k_1 ，于是在新树中k_2 变成了k_1 的右儿子，X和Z仍然分别是k_1 的左儿子和k_2 的右儿子。
 
-http://www.jiayongliang.cn/diary/img/201807/tree23.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree23.png]]
 
 情形4代表一种对称的情形。图4-33指出单旋转如何使用。
 *** 双旋转
 上面描述的算法有一个问题：如图4-34所示，对于情形2和情形3上面的做法无效。问题在于子树Y太深，单旋转没有降低它的深度。解决这问题的双旋转在图4-35中给出。
 
-http://www.jiayongliang.cn/diary/img/201807/tree24.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree24.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree25.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree25.png]]
 
 为了重新平衡，我们看到不能再让k_3 作为根了，而图4-34所示的在k_3 和k_1 之间的旋转又解决不了问题，惟一的选择就是把k_2  用作新的根。容易看出，最后得到的树满足AVL树的特性，与单旋转的情形一样，我们也把树的高度恢复到插入以前的水平，这就保证所有的重新平衡和高度更新是完善的。
 *** 编程实现
@@ -56,15 +56,15 @@ http://www.jiayongliang.cn/diary/img/201807/tree25.png
 
 另一种效率问题涉及到高度信息的存储。。由于真正需要的实际上就是子树高度的差，应该保证它很小。
 
-http://www.jiayongliang.cn/diary/img/201807/tree26.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree26.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree27.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree27.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree28.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree28.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree29.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree29.png]]
 
-http://www.jiayongliang.cn/diary/img/201807/tree30.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree30.png]]
 ** 伸展树
 
 伸展树（splay tree）,它保证从空树开始任意连续M次对树的操作最多花费O（MlogN）时间。
@@ -79,7 +79,7 @@ http://www.jiayongliang.cn/diary/img/201807/tree30.png
 
 我们仍然从底部向上沿着访问路径旋转。令X是在访问路径上的一个（非根）节点，我们将在这个路径上实施旋转操作。如果X的父节点是树根，那么我们只要旋转X和树根。这就是沿着访问节点上的最后的旋转。否则，X就有父亲（P）和祖父（G）,存在两种情况以及对称的情形要考虑。第一种情况是之字型（zig-zag）情形（见图4-44）。这里，X是右儿子的形式，P是左儿子的形式（反之亦然）。如果是这种情况，我们就执行一次像AVL那样的双旋转。否则，出现另一种一字型（zig-zig）情形：X和P或者都是左儿子，或者都是右儿子。在这种情况下，我们把图4-45左边的树变换成右边的树。
 
-http://www.jiayongliang.cn/diary/img/201807/tree31.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree31.png]]
 
 虽然从一些小例子很难看出来，但是展开操作不仅将访问的节点移动到根处，而且还把访问路径上大部分节点的深度大致减少一半的效果（某些浅的节点最多向下推后两个层次）。
 

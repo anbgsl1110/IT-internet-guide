@@ -26,11 +26,11 @@ http://www.jiayongliang.cn/diary/img/201807/tree32.png
 
 图4-58中的树是4阶B-树的一个例子。
 
-http://www.jiayongliang.cn/diary/img/201807/tree33.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree33.png]]
 
 4阶B-树更流行的称呼是2-3-4树。而3阶B-树叫做2-3树。
 
-http://www.jiayongliang.cn/diary/img/201807/tree34.png
+[[http://www.jiayongliang.cn/diary/img/201807/tree34.png]]
 
 为了执行一次Find，我们从根开始并根据要查找的关键字与存储在节点上的两个（很可能是一个）值之间的关系确定（最多）三个方向中的一个方向。
 

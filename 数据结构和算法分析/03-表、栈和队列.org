@@ -23,7 +23,7 @@
 ** 链表
 为了避免插入和删除的线性开销，我们需要允许表可以不连续存储，否则表的部分或全部需要整体移动。
 
-http://www.jiayongliang.cn/diary/img/201806/arrayList-implement01.png 
+[[http://www.jiayongliang.cn/diary/img/201806/arrayList-implement01.png]]
 
 链表由一系列不必在内存中相连的结构组成。每一个结构均含有表元素和指向包含该元素后继元的结构的指针。我们称之为Next指针。最后一个单元的Next指针指向NULL。
 ** 程序设计细节
