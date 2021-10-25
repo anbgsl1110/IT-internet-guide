@@ -1,4 +1,4 @@
-#+title:06-树-3
+#+title:06-B-树
 #+date:20180708
 #+email:anbgsl1110@gmail.com
 #+keywords: 数据结构 算法分析 树  jiayonghliang
