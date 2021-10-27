@@ -20,7 +20,7 @@ HTTP协议一般用于B/S架构。 浏览器作为HTTP客户端通过URL向HTTP�
 
 我们以访问百度为例：
 
-[[http://www.jiayongliang.cn/diary/img/201910/http01.jpg]]
+[[/static/img/SRE运维之道/img.png]]
 
 * HTTP特点
 1. http协议支持客户端/服务端模式，也是一种请求/响应模式的协议。
@@ -40,14 +40,14 @@ URL则是用来定位具体的资源的，标示了一个具体的资源位置�
 2. 请求头（Request Header）
 3. 请求正文
 
-[[http://www.jiayongliang.cn/diary/img/201910/http02.jpg]]
+[[/static/img/SRE运维之道/img_1.png]]
 
 ** 响应报文构成
 1. 状态行
 2. 响应头
 3. 响应正文
 
-[[http://www.jiayongliang.cn/diary/img/201910/http03.jpg]]
+[[/static/img/SRE运维之道/img_2.png]]
 
 * 常见的请求方法
 - GET：请求指定的页面信息，并返回实体主体。
@@ -56,9 +56,9 @@ URL则是用来定位具体的资源的，标示了一个具体的资源位置�
 - PUT：从客户端向服务器传送的数据取代指定的文档的内容。
 - DELETE：请求服务器删除指定的页面。
 ** get请求
-[[http://www.jiayongliang.cn/diary/img/201910/http04.jpg]]
+[[/static/img/SRE运维之道/img_3.png]]
 ** post请求
-[[http://www.jiayongliang.cn/diary/img/201910/http05.jpg]]
+[[/static/img/SRE运维之道/img_4.png]]
 ** post请求和get请求的区别
 - 都包含有请求头和请求行，post多了请求body
 - get多用来查询，请求参数放在url中，不会对服务器上的内容产生作用。post用来提交。如把账户密码放入body中。
@@ -86,9 +86,7 @@ URL则是用来定位具体的资源的，标示了一个具体的资源位置�
 * 为什么要用https
 实际使用中，绝大数的网站现在都采用https协议，这也是未来互联网发展的趋势。下面是通过wireshark抓取一个博客网站登录请求过程。
 
-[[http://www.jiayongliang.cn/diary/img/201910/http06.jpg]]
-
-[[http://www.jiayongliang.cn/diary/img/201910/http07.jpg]]
+[[/static/img/SRE运维之道/img_5.png]]
 
 可以看到访问账户密码都是明文传输，这样客户端发出的请求很容易被不法分子截取利用，因此，HTTP协议不适合传输一些敏感信息，比如：各种账户、密码等信息，使用http协议传输隐私信息非常的不安全。
 ** 一般http中存在如下问题：
@@ -111,7 +109,7 @@ TLS（Transport Layer Security，传输层安全）：其前身是SSL，它最�
 5. 2006年和2008年，发布了TLS/1.1版本和TLS/1.2版本
 * 浏览器在使用HTTPS传输数据的流程是什么？
 
-[[http://www.jiayongliang.cn/diary/img/201910/http08.jpg]]
+[[/static/img/SRE运维之道/img_6.png]]
 
 1. 首先客户端通过URL访问服务器建立SSL连接。
 2. 服务端收到客户端请求后，会将网站支持的证书信息（证书中包含公钥）传送一份给客户端。

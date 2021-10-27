@@ -5,7 +5,6 @@
 #+description:数据库开发
 #+options: toc:2 html-postamble:nil
 #+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
-* 数据库更新监听和数据不一致的问题
 ** 误区
 - 使用触发器
 - 定期进行数据库的检测
