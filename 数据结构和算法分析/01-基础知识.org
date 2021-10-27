@@ -1,4 +1,4 @@
-#+title:01-基础知识
+#+title:数据结构与算法分析读书笔记系列01-基础知识
 #+date:20180610
 #+email:anbgsl1110@gmail.com
 #+keywords: 数据结构 算法分析 基础知识  jiayonghliang

@@ -1,4 +1,4 @@
-#+title:07-散列（hashing）
+#+title:数据结构与算法分析读书笔记系列07-散列（hashing）
 #+date:20180715
 #+email:anbgsl1110@gmail.com
 #+keywords: 数据结构 算法分析 散列  jiayonghliang

@@ -1,4 +1,4 @@
-#+title:06-B-树
+#+title:数据结构与算法分析读书笔记系列06-B-树
 #+date:20180708
 #+email:anbgsl1110@gmail.com
 #+keywords: 数据结构 算法分析 树  jiayonghliang
