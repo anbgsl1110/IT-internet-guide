@@ -1,0 +1,221 @@
+#+title:Elastic Search基础知识长文总结
+#+author:jiayongliang
+#+date:2020-03-15
+#+email:anbgsl1110@gmail.com
+#+keywords: ES Elastic Search 搜索引擎 基础 jiayonghliang
+#+description: Elastic Search 搜索引擎 ES基础入门
+#+options: toc:2 html-postamble:nil  ^:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 前言
+Elasticsearch 是一个实时的分布式搜索分析引擎，它能让你以前所未有的速度和规模，去探索你的数据。 它被用作全文检索、结构化搜索、分析以及这三个功能的组合。
+
+Elasticsearch 中没有一个单独的组件是全新的或者是革命性的。全文搜索很久之前就已经可以做到了， 就像很早之前出现的分析系统和分布式数据库。 革命性的成果在于将这些单独的，有用的组件融合到一个单一的、一致的、实时的应用中。
+
+Elasticsearch 鼓励你去探索与利用数据，而不是因为查询数据太困难，就让它们烂在数据仓库里面。
+* Elasticsearch介绍
+Elasticsearch 是一个开源的搜索引擎，建立在一个全文搜索引擎库 Apache Lucene™ 基础之上。 Lucene 可以说是当下最先进、高性能、全功能的搜索引擎库—​无论是开源还是私有。
+
+Elasticsearch 也是使用 Java 编写的，它的内部使用 Lucene 做索引与搜索，但是它的目的是使全文检索变得简单， 通过隐藏 Lucene 的复杂性，取而代之的提供一套简单一致的 RESTful API。
+
+然而，Elasticsearch 不仅仅是 Lucene，并且也不仅仅只是一个全文搜索引擎。 它可以被下面这样准确的形容：
+
+- 一个分布式的实时文档存储，每个字段 可以被索引与搜索
+- 一个分布式实时分析搜索引擎
+- 能胜任上百个服务节点的扩展，并支持 PB 级别的结构化或者非结构化数据
+Elasticsearch 将所有的功能打包成一个单独的服务，这样你可以通过程序与它提供的简单的 RESTful API 进行通信， 可以使用自己喜欢的编程语言充当 web 客户端，甚至可以使用命令行（去充当这个客户端）。
+* 和Elasticsearch交互
+**** Java API
+如果你正在使用Java，在代码中你可以使用 Elasticsearch 内置的两个客户端：
+
+*节点客户端（Node client*
+
+节点客户端作为一个非数据节点加入到本地集群中。换句话说，它本身不保存任何数据，但是它知道数据在集群中的哪个节点中，并且可以把请求转发到正确的节点。
+
+*传输客户端（Transport client）*
+
+轻量级的传输客户端可以将请求发送到远程集群。它本身不加入集群，但是它可以将请求转发到集群中的一个节点上。
+
+两个Java 客户端都是通过 9300 端口并使用 Elasticsearch 的原生 传输 协议和集群交互。集群中的节点通过端口 9300 彼此通信。如果这个端口没有打开，节点将无法形成一个集群。
+
+**** RESTful API with JSON over HTTP
+所有其他语言可以使用 RESTful API 通过端口 9200 和 Elasticsearch 进行通信，你可以用你最喜爱的 web 客户端访问 Elasticsearch 。事实上，也可以使用 curl 命令来和 Elasticsearch 交互。
+
+http请求组成
+#+BEGIN_SRC shell
+
+curl -X<VERB> '<PROTOCOL>://<HOST>:<PORT>/<PATH>?<QUERY_STRING>' -d '<BODY>'
+
+#+END_SRC
+| 部件         | 描述                                                                                                                     |
+|--------------+--------------------------------------------------------------------------------------------------------------------------|
+| VERB         | 适当的 HTTP 方法 或 谓词 : GET、 POST、 PUT、 HEAD 或者 DELETE。                                                       |
+| PROTOCOL     | http 或者 https（如果你在 Elasticsearch 前面有一个 https 代理）                                                        |
+| HOST         | Elasticsearch 集群中任意节点的主机名，或者用 localhost 代表本地机器上的节点。                                          |
+| PORT         | 运行 Elasticsearch HTTP 服务的端口号，默认是 9200 。                                                                   |
+| PATH         | API 的终端路径（例如 _count 将返回集群中文档数量）。Path 可能包含多个组件，例如：_cluster/stats 和 _nodes/stats/jvm 。 |
+| QUERY_STRING | 任意可选的查询字符串参数 (例如 ?pretty 将格式化地输出 JSON 返回值，使其更容易阅读)                                     |
+| BODY         | 一个 JSON 格式的请求体 (如果请求需要的话)                                                                              |
+|--------------+------------------------------------------------------------------------------------------------------------------------|
+
+例如，计算集群中文档的数量，我们可以用这个:
+#+BEGIN_SRC shell
+curl -XGET 'http://localhost:9200/_count?pretty' -d '
+{
+    "query": {
+        "match_all": {}
+    }
+}
+'
+#+END_SRC
+Elasticsearch 返回一个 HTTP 状态码（例如：200 OK）和（除`HEAD`请求）一个 JSON 格式的返回值。
+#+BEGIN_SRC shell
+{
+    "count" : 0,
+    "_shards" : {
+        "total" : 5,
+        "successful" : 5,
+        "failed" : 0
+    }
+}
+#+END_SRC
+* 面向文档
+Elasticsearch 是 面向文档 的，意味着它存储整个对象或 文档。Elasticsearch 不仅存储文档，而且 索引 每个文档的内容，使之可以被检索。在 Elasticsearch 中，我们对文档进行索引、检索、排序和过滤—​而不是对行列数据。这是一种完全不同的思考数据的方式，也是 Elasticsearch 能支持复杂全文检索的原因。
+
+Elasticsearch 使用 JavaScript Object Notation（或者 JSON）作为文档的序列化格式。
+* 索引
+一个 Elasticsearch集群可以 包含多个索引，相应的每个索引可以包含多个类型 。这些不同的类型存储着多个文档，每个文档又有多个属性 。
+#+BEGIN_SRC org
+
+索引这个词在 Elasticsearch 语境中有多种含义， 这里有必要做一些说明：
+
+索引（名词）：
+
+如前所述，一个索引类似于传统关系数据库中的一个数据库，是一个存储关系型文档的地方。索引(index)的复数词为indices或indexes。
+
+索引（动词）：
+
+索引一个文档就是存储一个文档到一个索引（名词）中以便被检索和查询。这非常类似于SQL语句中的INSERT关键词，除了文档已存在时，新文档会替换旧文档情况之外。
+
+倒排索引：
+
+关系型数据库通过增加一个索引比如一个B树（B-tree）索引到指定的列上，以便提升数据检索速度。Elasticsearch和Lucene使用了一个叫做倒排索引的结构来达到相同的目的。
+
++ 默认的，一个文档中的每一个属性都是被索引的（有一个倒排索引）和可搜索的。一个没有倒排索引的属性是不能被搜索到的。
+
+#+END_SRC
+* 检索文档
+这在Elasticsearch中很简单。简单地执行一个HTTP GET 请求并指定文档的地址——索引库、类型和ID。使用这三个信息可以返回原始的JSON文档。
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/1?pretty"
+#+END_SRC
+将 HTTP命令由PUT改为GET可以用来检索文档，同样的，可以使用DELETE命令来删除文档，以及使用 HEAD指令来检查文档是否存在。如果想更新已存在的文档，只需再次 PUT 。
+* 轻量搜索
+一个 GET 是相当简单的，可以直接得到指定的文档。现在尝试点儿稍微高级的功能，比如一个简单的搜索！
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?pretty"
+#+END_SRC
+可以看到，我们仍然使用索引库 megacorp 以及类型 employee，但与指定一个文档 ID 不同，这次使用 _search。返回结果包括了所有的文档，放在数组 hits 中。一个搜索默认返回十条结果。
+
+搜索姓氏为 ``Smith`` 的雇员。为此，我们将使用一个 高亮 搜索，很容易通过命令行完成。这个方法一般涉及到一个 查询字符串 （query-string） 搜索，因为我们通过一个URL参数来传递查询信息给搜索接口：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?q=last_name:Smith&pretty"
+#+END_SRC
+* 使用查询表达式搜索
+Query-string 搜索通过命令非常方便地进行临时性的即席搜索 ，但它有自身的局限性。Elasticsearch 提供一个丰富灵活的查询语言叫做 查询表达式 ， 它支持构建更加复杂和健壮的查询。
+
+领域特定语言 （DSL）， 使用 JSON 构造了一个请求。我们可以像这样重写之前的查询所有名为 Smith 的搜索 ：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "match" : {
+            "last_name" : "Smith"
+        }
+    }
+}
+'
+#+END_SRC
+这个请求使用 JSON 构造，并使用了一个 match 查询（属于查询类型之一，后面将继续介绍）。
+* 更复杂的搜索
+同样搜索姓氏为 Smith 的员工，但这次我们只需要年龄大于 30 的。查询需要稍作调整，使用过滤器 filter ，它支持高效地执行一个结构化查询。
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "bool": {
+            "must": {
+                "match" : {
+                    "last_name" : "smith"
+                }
+            },
+            "filter": {
+                "range" : {
+                    "age" : { "gt" : 30 }
+                }
+            }
+        }
+    }
+}
+'
+
+#+END_SRC
+* 全文搜索
+截止目前的搜索相对都很简单：单个姓名，通过年龄过滤。现在尝试下稍微高级点儿的全文搜索——一项 传统数据库确实很难搞定的任务。
+
+搜索下所有喜欢攀岩（rock climbing）的员工：
+#+BEGIN_SRC shell
+GET /megacorp/employee/_search
+{
+    "query" : {
+        "match" : {
+            "about" : "rock climbing"
+        }
+    }
+}
+#+END_SRC
+Elasticsearch 默认按照相关性得分排序，即每个文档跟查询的匹配程度。Elasticsearch中的相关性概念非常重要，也是完全区别于传统关系型数据库的一个概念，数据库中的一条记录要么匹配要么不匹配。
+* 短语搜索
+找出一个属性中的独立单词是没有问题的，但有时候想要精确匹配一系列单词或者_短语_ 。 比如， 我们想执行这样一个查询，仅匹配同时包含 “rock” 和 “climbing” ，并且 二者以短语 “rock climbing” 的形式紧挨着的雇员记录。
+
+为此对 match 查询稍作调整，使用一个叫做 match_phrase 的查询：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "match_phrase" : {
+            "about" : "rock climbing"
+        }
+    }
+}
+'
+#+END_SRC
+* 高亮搜索
+许多应用都倾向于在每个搜索结果中 高亮 部分文本片段，以便让用户知道为何该文档符合查询条件。在 Elasticsearch 中检索出高亮片段也很容易。
+
+再次执行前面的查询，并增加一个新的 highlight 参数：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/megacorp/employee/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "match_phrase" : {
+            "about" : "rock climbing"
+        }
+    },
+    "highlight": {
+        "fields" : {
+            "about" : {}
+        }
+    }
+}
+'
+#+END_SRC
+当执行该查询时，返回结果与之前一样，与此同时结果中还多了一个叫做 highlight 的部分。这个部分包含了 about 属性匹配的文本片段，并以 HTML 标签 <em></em> 封装。
+* 分析
+Elasticsearch有一个功能叫聚合（aggregations），允许我们基于数据生成一些精细的分析结果。聚合与 SQL 中的 GROUP BY 类似但更强大。
+* 分布式特性
+Elasticsearch 尽可能地屏蔽了分布式系统的复杂性。这里列举了一些在后台自动执行的操作：
+- 分配文档到不同的容器 或 分片 中，文档可以储存在一个或多个节点中
+- 按集群节点来均衡分配这些分片，从而对索引和搜索过程进行负载均衡
+- 复制每个分片以支持数据冗余，从而防止硬件故障导致的数据丢失
+- 将集群中任一节点的请求路由到存有相关数据的节点
+- 集群扩容时无缝整合新节点，重新分配分片以便从离群节点恢复
