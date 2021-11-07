@@ -1,0 +1,275 @@
+#+title:Elastic Search的文档管理总结
+#+author:jiayongliang
+#+date:2020-03-29
+#+email:anbgsl1110@gmail.com
+#+keywords: ES Elastic Search 搜索引擎 文档 jiayonghliang
+#+description: Elastic Search 搜索引擎 ES文档管理
+#+options: toc:2 html-postamble:nil  ^:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 前言
+Elastcisearch是分布式的文档存储。它能存储和检索复杂的数据结构—​序列化成为JSON文档—​以实时 的方式。换句话说，一旦一个文档被存储在Elasticsearch中，它就是可以被集群中的任意节点检索到。
+
+当然，我们不仅要存储数据，我们一定还需要查询它，成批且快速的查询它们。尽管现存的noSQL解决方案允许我们以文档的形式存储对象，但是他们仍旧需要我们思考如何查询我们的数据，以及确定哪些字段需要被索引以加快数据检索。
+
+在Elasticsearch中，每个字段的所有数据都是默认被索引的。即每个字段都有为了快速检索设置的专用倒排索引。而且，不像其他多数的数据库，它能在同一个查询中使用所有这些倒排索引，并以惊人的速度返回结果。
+* 什么是文档
+通常情况下，我们使用的术语对象和文档是可以互相替换的。不过，有一个区别：一个对象仅仅是类似于hash、hashmap、字典或者关联数组的JSON对象，对象中也可以嵌套其他的对象。对象可能包含了另外一些对象。在Elasticsearch中，术语文档有着特定的含义。它是指最顶层或者根对象,这个根对象被序列化成JSON并存储到Elasticsearch中，指定了唯一ID。
+#+BEGIN_SRC org
+字段的名字可以是任何合法的字符串，但 不可以 包含英文句号(.)。
+#+END_SRC
+* 文档元数据
+一个文档不仅仅包含它的数据，也包含元数据——有关文档的信息。三个必须的元数据元素如下：
+- _index
+  - 文档在哪存放
+- _type
+  - 文档表示的对象类别
+- _id
+  - 文档唯一标识
+**** _index
+一个索引应该是因共同的特性被分组到一起的文档集合。虽然也允许存储不相关的数据到一个索引中，但这通常看作是一个反模式的做法。
+
+实际上，在Elasticsearch中，我们的数据是被存储和索引在分片中，而一个索引仅仅是逻辑上的命名空间，这个命名空间由一个或者多个分片组合在一起。然而，这是一个内部细节，我们的应用程序根本不应该关心分片，对于应用程序而言，只需知道文档位于一个索引内。Elasticsearch会处理所有的细节。
+
+索引名必须小写，不能以下划线开头，不能包含逗号。
+**** _type
+数据可能在索引中只是松散的组合在一起，但是通常明确定义一些数据中的子分区是很有用的。
+
+Elasticsearch公开了一个称为types（类型）的特性，它允许您在索引中对数据进行逻辑分区。不同types的文档可能有不同的字段，但最好能够非常相似。
+
+一个 _type 命名可以是大写或者小写，但是不能以下划线或者句号开头，不应该包含逗号， 并且长度限制为256个字符。
+**** _id
+ID是一个字符串，当它和_index以及_type 组合就可以唯一确定Elasticsearch中的一个文档。当你创建一个新的文档，要么提供自己的_id，要么让Elasticsearch帮你生成。
+* 索引文档
+通过使用index API，文档可以被索引——存储和使文档可被搜索。但是首先，我们要确定文档的位置。正如我们刚刚讨论的，一个文档的_index、_type和_id唯一标识一个文档。我们可以提供自定义的_id值，或者让index API自动生成。
+
+*使用自定义的 ID*
+#+BEGIN_SRC shell
+PUT /{index}/{type}/{id}
+{
+  "field": "value",
+  ...
+}
+#+END_SRC
+在Elasticsearch中每个文档都有一个版本号。当每次对文档进行修改时（包括删除），_version的值会递增。在处理冲突中，使用_version号码确保你的应用程序中的一部分修改不会覆盖另一部分所做的修改。
+*Autogenerating IDs*
+
+如果你的数据没有自然的ID，Elasticsearch可以帮我们自动生成ID。请求的结构调整为：不再使用PUT谓词(“使用这个URL存储这个文档”)，而是使用POST谓词(“存储文档在这个URL命名空间下”)。
+
+现在该URL只需包含_index和_type:
+#+BEGIN_SRC shell
+POST /{index}/{type}/
+{
+  "field": "value",
+  ...
+}
+#+END_SRC
+自动生成的ID是URL-safe、基于Base64编码且长度为20个字符的GUID字符串。这些GUID字符串由可修改的FlakeID模式生成，这种模式允许多个节点并行生成唯一ID，且互相之间的冲突概率几乎为零。
+* 取回一个文档
+为了从 Elasticsearch 中检索出文档，我们仍然使用相同的_index,_type,和_id，但是HTTP谓词更改为GET:
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/website/blog/123?pretty&pretty"
+#+END_SRC
+
+GET请求的响应体包括{"found":true}，这证实了文档已经被找到。如果我们请求一个不存在的文档，我们仍旧会得到一个JSON响应体，但是found将会是false。此外，HTTP响应码将会是404 Not Found，而不是200OK。
+
+我们可以通过传递-i参数给curl命令，该参数能够显示响应的头部。
+
+*返回文档的一部分*
+
+默认情况下，GET请求会返回整个文档，这个文档正如存储在_source字段中的一样。但是也许你只对其中的title字段感兴趣。单个字段能用_source参数请求得到，多个字段也能使用逗号分隔的列表来指定。
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/website/blog/123?_source=title,text&pretty"
+#+END_SRC
+或者，如果你只想得到_source字段，不需要任何元数据，你能使用_source端点：
+#+BEGIN_SRC shell
+GET /website/blog/123/_source
+#+END_SRC
+* 检查文档是否存在
+如果只想检查一个文档是否存在--根本不想关心内容—​那么用HEAD方法来代替GET方法。HEAD请求没有返回体，只返回一个HTTP请求报头：
+#+BEGIN_SRC shell
+curl -i -XHEAD "http://localhost:9200/website/blog/123"
+#+END_SRC
+如果文档存在， Elasticsearch将返回一个200 ok的状态码：
+#+BEGIN_SRC shell
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=UTF-8
+Content-Length: 0
+#+END_SRC
+若文档不存在， Elasticsearch 将返回一个 404 Not Found 的状态码：
+#+BEGIN_SRC shell
+curl -i -XHEAD "http://localhost:9200/website/blog/124"
+
+HTTP/1.1 404 Not Found
+Content-Type: text/plain; charset=UTF-8
+Content-Length: 0
+#+END_SRC
+当然，一个文档仅仅是在检查的时候不存在，并不意味着一毫秒之后它也不存在：也许同时正好另一个进程就创建了该文档。
+* 更新整个文档
+在Elasticsearch中文档是不可改变的，不能修改它们。相反，如果想要更新现有的文档，需要重建索引或者进行替换，我们可以使用相同的index API进行实现。
+
+在内部，Elasticsearch已将旧文档标记为已删除，并增加一个全新的文档。尽管你不能再对旧版本的文档进行访问，但它并不会立即消失。当继续索引更多的数据Elasticsearch 会在后台清理这些已删除文档。
+
+update API, 这个API可以用于partial updates to a document。虽然它似乎对文档直接进行了修改，但实际上Elasticsearch按前述完全相同方式执行以下过程：
+1. 从旧文档构建 JSON
+2. 更改该 JSON
+3. 删除旧文档
+4. 索引一个新文档
+唯一的区别在于, update API仅仅通过一个客户端请求来实现这些步骤，而不需要单独的get和index 请求。
+* 创建新文档
+当我们索引一个文档，怎么确认我们正在创建一个完全新的文档，而不是覆盖现有的呢？
+
+请记住，_index、_type和_id的组合可以唯一标识一个文档。所以，确保创建一个新文档的最简单办法是，使用索引请求的POST形式让Elasticsearch自动生成唯一_id:
+#+BEGIN_SRC shell
+POST /website/blog/
+{ ... }
+#+END_SRC
+
+然而，如果已经有自己的_id，那么我们必须告诉Elasticsearch，只有在相同的_index、_type和_id不存在时才接受我们的索引请求。这里有两种方式，他们做的实际是相同的事情。使用哪种，取决于哪种使用起来更方便。
+
+第一种方法使用op_type查询-字符串参数：
+#+BEGIN_SRC shell
+PUT /website/blog/123?op_type=create
+{ ... }
+#+END_SRC
+
+第二种方法是在URL末端使用/_create :
+#+BEGIN_SRC shell
+PUT /website/blog/123/_create
+{ ... }
+#+END_SRC
+* 删除文档
+删除文档的语法和我们所知道的规则相同，只是使用DELETE方法：
+#+BEGIN_SRC shell
+DELETE /website/blog/123
+#+END_SRC
+* 处理冲突
+变更越频繁，读数据和更新数据的间隙越长，也就越可能丢失变更。
+
+在数据库领域中，有两种方法通常被用来确保并发更新时变更不会丢失：
+
+*悲观并发控制*
+
+这种方法被关系型数据库广泛使用，它假定有变更冲突可能发生，因此阻塞访问资源以防止冲突。一个典型的例子是读取一行数据之前先将其锁住，确保只有放置锁的线程能够对这行数据进行修改。
+
+*乐观并发控制*
+
+Elasticsearch中使用的这种方法假定冲突是不可能发生的，并且不会阻塞正在尝试的操作。然而，如果源数据在读写当中被修改，更新将会失败。应用程序接下来将决定该如何解决冲突。 例如，可以重试更新、使用新的数据、或者将相关情况报告给用户。
+
+Elasticsearch是分布式的。当文档创建、更新或删除时，新版本的文档必须复制到集群中的其他节点。Elasticsearch也是异步和并发的，这意味着这些复制请求被并行发送，并且到达目的地时也许顺序是乱的。Elasticsearch需要一种方法确保文档的旧版本不会覆盖新的版本。
+
+当我们之前讨论index，GET和delete请求时，我们指出每个文档都有一个_version（版本）号，当文档被修改时版本号递增。Elasticsearch使用这个_version号来确保变更以正确顺序得到执行。如果旧版本的文档在新版本之后到达，它可以被简单的忽略。
+
+我们可以利用_version号来确保应用中相互冲突的变更不会导致数据丢失。我们通过指定想要修改文档的version号来达到这个目的。如果该版本不是当前版本号，我们的请求将会失败。
+
+所有文档的更新或删除API，都可以接受version参数，这允许你在代码中使用乐观的并发控制，这是一种明智的做法。
+
+*通过外部系统使用版本控制*
+
+一个常见的设置是使用其它数据库作为主要的数据存储，使用Elasticsearch做数据检索，这意味着主数据库的所有更改发生时都需要被复制到Elasticsearch，如果多个进程负责这一数据同步，你可能遇到类似于之前描述的并发问题。
+
+如果你的主数据库已经有了版本号—或一个能作为版本号的字段值比如timestamp—那么你就可以在Elasticsearch中通过增加version_type=external到查询字符串的方式重用这些相同的版本号，版本号必须是大于零的整数，且小于9.2E+18 — 一个Java中long类型的正值。
+
+外部版本号的处理方式和我们之前讨论的内部版本号的处理方式有些不同，Elasticsearch不是检查当前_version和请求中指定的版本号是否相同，而是检查当前_version是否小于指定的版本号。如果请求成功，外部的版本号作为文档的新_version进行存储。
+
+外部版本号不仅在索引和删除请求是可以指定，而且在 创建 新文档时也可以指定。
+* 文档的部分更新
+文档是不可变的：他们不能被修改，只能被替换。update API必须遵循同样的规则。从外部来看，我们在一个文档的某个位置进行部分更新。然而在内部,update API简单使用与之前描述相同的检索-修改-重建索引的处理过程。区别在于这个过程发生在分片内部，这样就避免了多次请求的网络开销。通过减少检索和重建索引步骤之间的时间，我们也减少了其他进程的变更带来冲突的可能性。
+
+update请求最简单的一种形式是接收文档的一部分作为doc的参数，它只是与现有的文档进行合并。对象被合并到一起，覆盖现有的字段，增加新的字段。 
+
+脚本可以在update API中用来改变_source的字段内容，它在更新脚本中称为ctx._source 。用Groovy脚本编程，然而 Groovy 脚本引擎存在漏洞， 允许攻击者通过构建Groovy脚本，在Elasticsearch Java VM 运行时脱离沙盒并执行shell命令。
+
+检索和重建索引步骤的间隔越小，变更冲突的机会越小。但是它并不能完全消除冲突的可能性。 
+
+对于部分更新的很多使用场景，文档已经被改变也没有关系。例如，如果两个进程都对页面访问量计数器进行递增操作，它们发生的先后顺序其实不太重要；如果冲突发生了，我们唯一需要做的就是尝试再次更新。
+
+这可以通过设置参数retry_on_conflict来自动完成，这个参数规定了失败之前update应该重试的次数，它的默认值为 0 。
+* 取回多个文档
+将多个请求合并成一个，避免单独处理每个请求花费的网络延时和开销。如果你需要从Elasticsearch检索很多文档，那么使用multi-get或者mget API来将这些检索请求放在一个请求中，将比逐个文档请求更快地检索到全部文档。
+
+mget API要求有一个docs数组作为参数，每个元素包含需要检索文档的元数据，包括_index、_type和_id。如果你想检索一个或者多个特定的字段，那么你可以通过_source参数来指定这些字段的名字：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/_mget?pretty" -H 'Content-Type: application/json' -d'
+{
+   "docs" : [
+      {
+         "_index" : "website",
+         "_type" :  "blog",
+         "_id" :    2
+      },
+      {
+         "_index" : "website",
+         "_type" :  "pageviews",
+         "_id" :    1,
+         "_source": "views"
+      }
+   ]
+}
+'
+#+END_SRC
+如果想检索的数据都在相同的_index中（甚至相同的_type中），则可以在URL中指定默认的/_index或者默认的/_index/_type。仍然可以通过单独请求覆盖这些值。
+* 代价较小的批量操作
+与 mget 可以使我们一次取回多个文档同样的方式， bulk API 允许在单个步骤中进行多次 create 、 index 、 update 或 delete 请求。 如果你需要索引一个数据流比如日志事件，它可以排队和索引数百或数千批次。
+
+bulk 与其他的请求体格式稍有不同，如下所示：
+#+BEGIN_SRC shell
+{ action: { metadata }}\n
+{ request body        }\n
+{ action: { metadata }}\n
+{ request body        }\n
+...
+#+END_SRC
+
+这种格式类似一个有效的单行JSON文档流，它通过换行符(\n)连接到一起。注意两个要点：
+- 每行一定要以换行符(\n)结尾，包括最后一行。这些换行符被用作一个标记，可以有效分隔行。
+- 这些行不能包含未转义的换行符，因为他们将会对解析造成干扰。这意味着这个JSON不能使用pretty参数打印。
+
+action/metadata行指定哪一个文档做什么操作。
+
+action必须是以下选项之一:
+- create
+  - 如果文档不存在，那么就创建它。
+- index
+  - 创建一个新文档或者替换一个现有的文档。。
+- update
+  - 部分更新一个文档。
+- delete
+  - 删除一个文档。
+metadata应该指定被索引、创建、更新或者删除的文档的_index、_type和_id。
+
+注意delete动作不能有请求体,它后面跟着的是另外一个操作。例如：
+#+BEGIN_SRC shell
+curl -X POST "localhost:9200/_bulk?pretty" -H 'Content-Type: application/json' -d'
+{ "delete": { "_index": "website", "_type": "blog", "_id": "123" }} 
+{ "create": { "_index": "website", "_type": "blog", "_id": "123" }}
+{ "title":    "My first blog post" }
+{ "index":  { "_index": "website", "_type": "blog" }}
+{ "title":    "My second blog post" }
+{ "update": { "_index": "website", "_type": "blog", "_id": "123", "_retry_on_conflict" : 3} }
+{ "doc" : {"title" : "My updated blog post"} }
+'
+#+END_SRC
+
+每个子请求都是独立执行，因此某个子请求的失败不会对其他子请求的成功与否造成影响。如果其中任何子请求失败，最顶层的error标志被设置为true，并且在相应的请求报告出错误明细。这也意味着bulk请求不是原子的：不能用它来实现事务控制。每个请求是单独处理的，因此一个请求的成功或失败不会影响其他的请求。
+
+*不要重复指定Index和Type*
+
+也许你正在批量索引日志数据到相同的index和type中。但为每一个文档指定相同的元数据是一种浪费。相反，可以像mget API一样，在bulk请求的URL中接收默认的/_index或者/_index/_type。
+
+仍然可以覆盖元数据行中的_index和_type,但是它将使用URL中的这些元数据值作为默认值：
+#+BEGIN_SRC shell
+curl -X POST "localhost:9200/website/log/_bulk?pretty" -H 'Content-Type: application/json' -d'
+{ "index": {}}
+{ "event": "User logged in" }
+{ "index": { "_type": "blog" }}
+{ "title": "Overriding the default type" }
+'
+#+END_SRC
+
+*多大是太大了？*
+
+整个批量请求都需要由接收到请求的节点加载到内存中，因此该请求越大，其他请求所能获得的内存就越少。批量请求的大小有一个最佳值，大于这个值，性能将不再提升，甚至会下降。但是最佳值不是一个固定的值。它完全取决于硬件、文档的大小和复杂度、索引和搜索的负载的整体情况。
+
+幸运的是，很容易找到这个最佳点：通过批量索引典型文档，并不断增加批量大小进行尝试。当性能开始下降，那么你的批量大小就太大了。一个好的办法是开始时将1,000到5,000个文档作为一个批次, 如果你的文档非常大，那么就减少批量的文档个数。
+
+密切关注你的批量请求的物理大小往往非常有用，一千个1KB的文档是完全不同于一千个1MB 文档所占的物理大小。一个好的批量大小在开始处理后所占用的物理大小约为5-15MB。
