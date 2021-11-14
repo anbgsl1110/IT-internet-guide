@@ -1,0 +1,145 @@
+#+title:Elastic Search轻量搜索总结
+#+author:jiayongliang
+#+date:2020-04-05
+#+email:anbgsl1110@gmail.com
+#+keywords: ES Elastic Search 搜索引擎 轻量搜索 jiayonghliang
+#+description: Elastic Search 搜索引擎 ES 轻量搜索
+#+options: toc:1 html-postamble:nil  ^:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org5.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+*** 前言
+我们可以将一个JSON文档扔到Elasticsearch里，然后根据ID检索。但Elasticsearch真正强大之处在于可以从无规律的数据中找出有意义的信息——从“大数据”到“大信息”。
+
+Elasticsearch不只会_存储（stores）_文档，为了能被搜索到也会为文档添加_索引（indexes）_，这也是为什么我们使用结构化的JSON文档，而不是无结构的二进制数据。
+
+文档中的每个字段都将被索引并且可以被查询。不仅如此，在简单查询时，Elasticsearch可以使用所有（all）这些索引字段，以惊人的速度返回结果。这是你永远不会考虑用传统数据库去做的一些事情。
+
+搜索（search）可以做到：
+
+- 在类似于gender或者age这样的字段上使用结构化查询，join_date这样的字段上使用排序，就像SQL的结构化查询一样。
+- 全文检索，找出所有匹配关键字的文档并按照_相关性（relevance）_排序后返回结果。
+- 以上二者兼而有之。
+很多搜索都是开箱即用的，为了充分挖掘Elasticsearch的潜力，需要理解以下三个概念：
+- 映射（Mapping）
+  - 描述数据在每个字段内如何存储
+- 分析（Analysis）
+  - 全文是如何处理使之可以被搜索的
+- 领域特定查询语言（Query DSL）
+  - Elasticsearch中强大灵活的查询语言
+*** 空搜索
+搜索API的最基础的形式是没有指定任何查询的空搜索，它简单地返回集群中所有索引下的所有文档：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/_search?pretty"
+#+END_SRC
+**** hits
+返回结果中最重要的部分是hits，它包含total字段来表示匹配到的文档总数，并且一个hits数组包含所查询结果的前十个文档。
+
+在hits数组中每个结果包含文档的_index、_type、_id，加上_source字段。这意味着我们可以直接从返回的搜索结果中使用整个文档。
+
+每个结果还有一个_score ，它衡量了文档与查询的匹配程度。
+
+max_score值是与查询所匹配文档的_score的最大值。
+**** took
+took值告诉我们执行整个搜索请求耗费了多少毫秒。
+**** shards
+_shards部分告诉我们在查询中参与分片的总数，以及这些分片成功了多少个失败了多少个。正常情况下我们不希望分片失败，但是分片失败是可能发生的。如果我们遭遇到一种灾难级别的故障，在这个故障中丢失了相同分片的原始数据和副本，那么对这个分片将没有可用副本来对搜索请求作出响应。假若这样，Elasticsearch将报告这个分片是失败的，但是会继续返回剩余分片的结果。
+**** timeout
+timed_out值告诉我们查询是否超时。默认情况下，搜索请求不会超时。如果低响应时间比完成结果更重要，可以指定timeout为10或者10ms（10毫秒），或者1s（1秒）：
+#+BEGIN_SRC shell
+GET '/_search?timeout=10ms'
+#+END_SRC
+在请求超时之前，Elasticsearch将会返回已经成功从每个分片获取的结果。使用超时是因为SLA(服务等级协议)对你是很重要的，而不是因为想去中止长时间运行的查询。
+*** 多索引，多类型
+如果不对某一特殊的索引或者类型做限制，就会搜索集群中的所有文档。Elasticsearch转发搜索请求到每一个主分片或者副本分片，汇集查询出的前10个结果，并且返回给我们。
+
+然而，经常的情况下，想在一个或多个特殊的索引并且在一个或者多个特殊的类型中进行搜索。我们可以通过在URL中指定特殊的索引和类型达到这种效果，如下所示：
+- /_search
+  - 在所有的索引中搜索所有的类型
+- /gb/_search
+  - 在gb索引中搜索所有的类型
+- /gb,us/_search
+  - 在gb和us索引中搜索所有的文档
+- /g*,u*/_search
+  - 在任何以g或者u开头的索引中搜索所有的类型
+- /gb/user/_search
+  - 在gb索引中搜索user类型
+- /gb,us/user,tweet/_search
+  - 在gb和us索引中搜索user和tweet类型
+- /_all/user,tweet/_search
+  - 在所有的索引中搜索user和tweet类型
+当在单一的索引下进行搜索的时候，Elasticsearch转发请求到索引的每个分片中，可以是主分片也可以是副本分片，然后从每个分片中收集结果。多索引搜索恰好也是用相同的方式工作的—​只是会涉及到更多的分片。
+
+搜索一个索引有五个主分片和搜索五个索引各有一个分片准确来所说是等价的。
+*** 分页
+例如空搜索返回集群中有14个文档匹配了（empty）query。但是在hits数组中只有10个文档。如何才能看到其他的文档？
+
+和SQL使用LIMIT关键字返回单个page结果的方法相同，Elasticsearch接受from和size参数：
+- size
+  - 显示应该返回的结果数量，默认是10
+- from
+  - 显示应该跳过的初始结果数量，默认是0
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/_search?size=5&pretty"
+curl -X GET "localhost:9200/_search?size=5&from=5&pretty"
+curl -X GET "localhost:9200/_search?size=5&from=10&pretty"
+#+END_SRC
+考虑到分页过深以及一次请求太多结果的情况，结果集在返回之前先进行排序。一个请求经常跨越多个分片，每个分片都产生自己的排序结果，这些结果需要进行集中排序以保证整体顺序是正确的。
+
+
+*在分布式系统中深度分页*
+
+理解为什么深度分页是有问题的，我们可以假设在一个有5个主分片的索引中搜索。当我们请求结果的第一页（结果从1到10），每一个分片产生前10的结果，并且返回给协调节点，协调节点对50个结果排序得到全部结果的前10个。
+
+现在假设我们请求第1000页—​结果从10001到10010。所有都以相同的方式工作除了每个分片不得不产生前10010个结果以外。然后协调节点对全部50050个结果排序最后丢弃掉这些结果中的50040个结果。
+
+可以看到，在分布式系统中，对结果排序的成本随分页的深度成指数上升。这就是web搜索引擎对任何查询都不要返回超过1000个结果的原因。
+*** 轻量搜索
+有两种形式的搜索API：一种是“轻量的”查询字符串版本，要求在查询字符串中传递所有的参数，另一种是更完整的请求体版本，要求使用JSON格式和更丰富的查询表达式作为搜索语言。
+
+查询字符串搜索非常适用于通过命令行做即时查询。例如，查询在tweet类型中tweet字段包含elasticsearch单词的所有文档：
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/_all/tweet/_search?q=tweet:elasticsearch&pretty"
+#+END_SRC
+
+查询字符串参数需要URL编码:
+#+BEGIN_SRC shell
+curl -X GET "localhost:9200/_search?q=%2Bname%3Ajohn+%2Btweet%3Amary&pretty"
+#+END_SRC
+实际的查询就是这样: +name:john +tweet:mary，前缀表示必须与查询条件匹配。类似地，-前缀表示一定不与查询条件匹配。没有+或者-的所有其他条件都是可选的——匹配的越多，文档就越相关。
+
+*_all字段*
+
+Elasticsearch是如何在三个不同的字段中查找到结果的呢？
+
+当索引一个文档的时候，Elasticsearch取出所有字段的值拼接成一个大的字符串，作为_all字段进行索引。
+
+这就好似增加了一个名叫_all的额外字段：除非设置特定字段，否则查询字符串就使用_all字段进行搜索。
+
+在刚开始开发一个应用时，_all字段是一个很实用的特性。之后，你会发现如果搜索时用指定字段来代替_all字段，将会更好控制搜索结果。当_all字段不再有用的时候，可以将它置为失效。
+#+BEGIN_SRC shell
+GET /_search
+{
+    "match": {
+        "_all": "john smith marketing"
+    }
+}
+#+END_SRC
+
+*更复杂的查询*
+
+下面的查询针对tweents类型，并使用以下的条件：
+- name字段中包含mary或者john
+- date值大于2014-09-10
+- _all字段包含aggregations或者geo
+#+BEGIN_SRC org
++name:(mary john) +date:>2014-09-10 +(aggregations geo)
+
+查询字符串在做了适当的编码后，可读性很差：
+
+?q=%2Bname%3A(mary+john)+%2Bdate%3A%3E2014-09-10+%2B(aggregations+geo)
+#+END_SRC
+
+查询字符串搜索允许任何用户在索引的任意字段上执行可能较慢且重量级的查询，这可能会暴露隐私信息，甚至将集群拖垮。
+
+因为这些原因，不推荐直接向用户暴露查询字符串搜索功能，除非对于集群和数据来说非常信任他们。
+
+相反，我们经常在生产环境中更多地使用功能全面的request body查询API，除了能完成以上所有功能，还有一些附加功能。
