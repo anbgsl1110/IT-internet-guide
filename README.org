@@ -34,6 +34,7 @@
 - [[/数据结构和算法分析/07-B-树.org][07-B-树]] : 与2-路树或二叉树不同，B-树是平衡M-路树，它能很好的匹配磁盘；其特殊情形是2-3树，它是实现平衡查找树的另一种常用方法。
 - [[/数据结构和算法分析/08-散列（hashing）.org][08-散列（hashing）]] : 散列表的实现常常叫做（hashing）。散列是一种用于以常数平均时间执行插入、删除和查找的技术。
 ** 引擎和分布式
+- [[/引擎和分布式/谈谈云原生中的SideCar模式.org][谈谈云原生中的SideCar模式]]
 - [[/引擎和分布式/Elastic Search基础知识长文总结.org][Elastic Search基础知识长文总结]]
 - [[/引擎和分布式/Elastic Search的文档管理总结.org][Elastic Search的文档管理总结]]
 - [[/引擎和分布式/Elastic Search轻量搜索总结.org][Elastic Search轻量搜索总结]]
