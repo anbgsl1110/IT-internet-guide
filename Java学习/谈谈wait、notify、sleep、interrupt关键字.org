@@ -1,0 +1,75 @@
+#+title:谈谈wait、notify、sleep、interrupt关键字
+#+date:2022-01-09
+#+email:anbgsl1110@gmail.com
+#+keywords: Java volatile 并发编程  jiayonghliang
+#+description:java wait、notify、sleep、interrupt
+#+options: toc:3 html-postamble:nil
+#+html_head: <link rel="stylesheet" href="http://www.jiayongliang.cn/css/org3.css" type="text/css" /><div id="main-menu-index"></div><script src="http://www.jiayongliang.cn/js/add-main-menu.js" type="text/javascript"></script>
+* 前言
+以前线程状态涉及的wait、notify、sleep、interrupt关键字，脑海中都知道个大概，但是却很少系统的深入理解。
+
+[[/static/img/Java学习/并发编程/img1.png]]
+
+上图基本说明了线程的各个状态，但是 sleep wait notify interrupt等到底是什么意思呢？下面逐个展开来介绍。
+* 方法简介
+** Thread类
+- sleep：暂停当前正在执行的线程；（类方法）
+- yield：暂停当前正在执行的线程，并执行其他线程；（类方法）
+- join：等待该线程终止；
+- interrupt：中断该线程，当线程调用wait(),sleep(),join()或I/O操作时，将收到InterruptedException或 ClosedByInterruptException；
+** Object类
+- wait：暂停当前正在执行的线程，直到调用notify()或notifyAll()方法或超时，退出等待状态；
+- notify：唤醒在该对象上等待的一个线程；
+- notifyAll：唤醒在该对象上等待的所有线程；
+* 详细分析
+** synchronized
+synchronized是我们常用的锁，它可以用任意一个对象加锁，也可以用任意一个类，在静态方法加的锁是类锁，在普通方法加的锁是对象锁，所有从这里可以看出，锁其实锁的是一块内存区域，静态锁，锁的是类对象所在的内存空间，而对象锁，锁的是这个对象所在的空间地址，
+
+JVM基于进入和退出Monitor对象来实现方法同步和代码块同步，代码块同步是使用monitorenter和monitorexit指令实现的，而方法同步是使用另外一种方式实现的，细节在JVM规范里并没有详细说明。但是，方法的同步同样可以使用这两个指令来实现。
+
+monitorenter指令是在编译后插入到同步代码块的开始位置，而monitorexit是插入到方法结束处和异常处，JVM要保证每个monitorenter必须有对应的monitorexit与之配对。任何对象都有一个monitor与之关联（任何对象都可以当成锁），当且一个monitor被持有后，它将处于锁定状态。线程执行到monitorenter指令时，将会尝试获取对象所对应的monitor的所有权，即尝试获得对象的锁
+** sleep
+sleep 顾名思义，线程阻塞，sleep是让线程阻塞，让出CPU的资源，但是此时他是不释放锁的，也就是说在一个synchronized加锁的代码块中，如果sleep,此时这个线程会从Running状态到 Runnable状态，但是代码此时还是阻塞在这里，除非sleep时间到或者调用interrupt打断，那么interrupt又是怎么的原理的？下面慢慢说。所有有时候我们会见到 Thread.sleep(0);其实这个并不是为了让线程阻塞，而且为了调节CPU调用线程的优先级，让sleep的线程让出CPU.
+** wait
+wait也是让线程阻塞，让出CPU,但是它和sleep的区别是，他会释放锁。另外，wait是Object的方法，wait有个重载方法，可以设置wait等待时间，wait阻塞可以被notify notifyAll 唤醒，或者被interrupt打断。
+** sleep VS wait
+sleep()和wait()方法都是暂停当前正在执行的线程，出让CPU资源。
+
+| 方法  | 	所属类 | 	方法类型   | 	锁       | 	解除方法                 | 	场景       | 	用途         |
+|-------+------------+----------------+--------------+------------------------------+----------------+------------------|
+| sleep | 	Thread | 	静态方法   | 	不释放锁 | 	timeout,interrupt        | 	无限制     | 	线程内的控制 |
+|-------+------------+----------------+--------------+------------------------------+----------------+------------------|
+| wait  | 	Object | 	非静态方法 | 	释放锁   | 	timeout,notify,interrupt | 	同步语句块 | 	线程间的通信 |
+|-------+------------+----------------+--------------+------------------------------+----------------+------------------|
+** notify notifyAll
+notify和notifyAll，这两个是唤醒wait的线程，区别是，当某一个代码块有多个阻塞的时候，notify只能唤醒一个，是随机的一个，而notifyAll可以唤醒全部，需要注意的是，唤醒一个和多个等待的线程，但是不会立刻释放锁，而所得释放是看代码的运行情况的。有可能notifyALl后，又slepp，此时wait是不会执行的，因为notify代码块还没释放锁。
+** wait && notify
+调用对象的wait()、notify()、notifyAll()方法的线程，必须是作为此对象监视器的所有者。常见的场景便是就是synchronized关键字的语句块内部使用这3个方法，如果直接在线程中使用wait()、notify()、notifyAll()方法，那么会抛出异常IllegalMonitorStateException，抛出的异常表明某一线程已经试图等待对象的监视器，或者试图通知其他正在等待对象的监视器而本身没有指定监视器的线程。。
+
+调用wait()方法的线程，在调用该线程的interrupt()方法，则会重新尝试获取对象锁。只有当获取到对象锁，才开始抛出相应的异常，则执行该线程之后的程序。
+** interrupt
+interrupt()方法的工作仅仅是改变中断状态，并不是直接中断正在运行的线程。中断的真正原理是当线程被Object.wait(),Thread.join()或sleep()方法阻塞时，调用interrupt()方法后改变中断状态，而wait/join/sleep这些方法内部会不断地检查线程的中断状态值，当发现中断状态值改变时则抛出InterruptedException异常；对于没有阻塞的线程，调用interrupt()方法是没有任何作用。
+** yield
+yield()方法使当前线程出让CPU执行时间，当并不会释放当前线程所持有的锁。执行完yield()方法后，线程从Running状态转变为Runnable状态，既然是Runnable状态，那么也很可能马上会被CPU调度再次进入Running状态。
+* 思考：Java上调用Object.wait()函数后，当前线程是否还拿着Object对象锁？
+*1. 在synchronized代码块中，调用Object.wait()后， 对象锁是否会释放？*
+
+答案是： yes, 对象锁被释放了。
+
+*2. 在synchronized代码块中，调用Thread.sleep()后，对象锁是否被释放？*
+
+答案是： no, 对象锁没有被释放。
+* 思考：为什么wait和notify都必须在synchronized代码块下面执行？
+假如没有同步代码块，那么wait和notify也没有存在的必要，另外也只有在代码块中，用的是同一个锁对象，才能知道该通知谁应该放弃阻塞。
+
+wait和notify底层也是用JVM的一个监控对象monitor，在HotSpot虚拟机中，monitor采用ObjectMonitor实现。
+
+每个线程都有两个ObjectMonitor对象列表，分别为free和used列表，如果当前free列表为空，线程将向全局global list请求分配ObjectMonitor。
+
+ObjectMonitor对象中有两个队列：_WaitSet 和 _EntryList，用来保存ObjectWaiter对象列表；_owner指向获得ObjectMonitor对象的线程
+
+waitSet队列存放的是wait的阻塞线程，而EntryList存放的是等待锁的线程（就绪队列）
+
+当我们调用wait的时候，就会把当前线程放进到阻塞队列里面，而当我们调用NotifyAll的时候，就会把阻塞队列的的线程挪到就绪队列。
+
+从上面的原理也可以看出一点注意的事项：wait和notify本事不是静态方法，需要有一个调用，而这个调用者就是加锁的那个对象。
