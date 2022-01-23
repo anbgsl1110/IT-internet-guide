@@ -3,6 +3,7 @@
 
 * 文章导航
 ** Java学习
+- [[/Java学习/谈谈Java锁的优化.org][谈谈Java锁的优化]]：在jdk1.6中，引入了偏向锁和轻量级锁，并使用锁升级机制对synchronized进行了充分的优化。其实除锁升级外，还使用了锁消除、锁粗化等优化手段，所以对它的认识要脱离“重量级”这一概念。
 - [[/Java学习/谈谈wait、notify、sleep、interrupt关键字.org][谈谈wait、notify、sleep、interrupt关键字]]：以前线程状态涉及的wait、notify、sleep、interrupt关键字，脑海中都知道个大概，但是却很少系统的深入理解。
 - [[/Java学习/谈谈volatile关键字.org][谈谈volatile关键字]] : 关键字volatile可以说是Java虚拟机提供的最轻量级的同步机制，但是它并不容易被正确地、完整地理解，以至于很多人都习惯不去使用它，遇到需要处理多线程数据竞争的问题时一律使用synchronized来进行同步。
 - [[/Java学习/谈谈JVM内存模型和Java内存模型.org][谈谈JVM内存模型和Java内存模型]] : 这两个概念容易混淆，但是Java内存模型和JVM内存结构真不是一回事。简单来说，Java内存模型，描述的是多线程允许的行为，会涉及到主内存与工作内存(本地内存)；JVM内存结构，描述的是线程运行所设计的内存空间，会涉及堆和栈。
